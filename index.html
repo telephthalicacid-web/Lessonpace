@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>レッスン消化ペース管理</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 500px; margin: 0 auto; background: #f0f2f5; color: #333; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h1 { font-size: 1.5em; text-align: center; color: #2c3e50; margin-top: 0; }
+        h2 { font-size: 1.1em; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 0;}
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; color: #555; }
+        input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccd0d5; border-radius: 6px; font-size: 1em; }
+        button { background: #0066cc; color: white; border: none; padding: 12px 15px; border-radius: 6px; cursor: pointer; font-size: 1em; width: 100%; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #0052a3; }
+        button:disabled { background: #cccccc; cursor: not-allowed; }
+        .btn-action { background: #28a745; margin-top: 15px; font-size: 1.1em; padding: 15px; }
+        .btn-action:hover { background: #218838; }
+        .stats { font-size: 1.1em; font-weight: bold; color: #d9534f; margin: 15px 0; padding: 15px; background: #fdf2f2; border-radius: 8px; text-align: center; }
+        .status-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1.1em; }
+        .status-value { font-weight: bold; color: #0066cc; font-size: 1.2em; }
+        .history-list { list-style: none; padding: 0; margin: 0; }
+        .history-list li { background: #f8f9fa; margin-bottom: 8px; padding: 10px; border-radius: 6px; font-size: 0.9em; border-left: 4px solid #0066cc; }
+        .empty-history { color: #888; font-size: 0.9em; text-align: center; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>レッスン管理</h1>
+        <div class="form-group">
+            <label for="totalLessons">残りレッスン回数 (回):</label>
+            <input type="number" id="totalLessons" min="1" placeholder="例: 10">
+        </div>
+        <div class="form-group">
+            <label for="endDate">消化期間終了日:</label>
+            <input type="date" id="endDate">
+        </div>
+        <button onclick="setGoal()">目標を設定・更新する</button>
+    </div>
+
+    <div class="card" id="trackerSection" style="display: none;">
+        <h2>現在のステータス</h2>
+        <div class="status-row">
+            <span>残り回数:</span>
+            <span class="status-value"><span id="displayRemaining">0</span> 回</span>
+        </div>
+        <div class="status-row">
+            <span>終了期限:</span>
+            <span class="status-value" id="displayEndDate">-</span>
+        </div>
+        
+        <div class="stats" id="paceDisplay">目標を設定してください</div>
+        
+        <button class="btn-action" id="executeBtn" onclick="executeLesson()">✅ 1回実施した（記録する）</button>
+    </div>
+
+    <div class="card">
+        <h2>直近の実施履歴</h2>
+        <ul class="history-list" id="historyList">
+            <div class="empty-history">まだ履歴はありません。</div>
+        </ul>
+    </div>
+
+    <script>
+        let appData = {
+            remainingLessons: 0,
+            expirationDate: null,
+            history: []
+        };
+
+        // ページ読み込み時に保存されたデータを復元
+        window.onload = function() {
+            const saved = localStorage.getItem('lessonTrackerData');
+            if (saved) {
+                appData = JSON.parse(saved);
+                document.getElementById('totalLessons').value = appData.remainingLessons;
+                if (appData.expirationDate) {
+                    document.getElementById('endDate').value = appData.expirationDate.split('T')[0];
+                }
+                if (appData.remainingLessons > 0 || appData.history.length > 0) {
+                    document.getElementById('trackerSection').style.display = 'block';
+                    updateDisplay();
+                }
+            }
+        };
+
+        function saveData() {
+            localStorage.setItem('lessonTrackerData', JSON.stringify(appData));
+        }
+
+        function setGoal() {
+            const lessonsInput = document.getElementById('totalLessons').value;
+            const dateInput = document.getElementById('endDate').value;
+
+            if (!lessonsInput || !dateInput) {
+                alert('残り回数と終了日を両方入力してください。');
+                return;
+            }
+
+            const endDateObj = new Date(dateInput);
+            endDateObj.setHours(23, 59, 59, 999); 
+            
+            if (endDateObj < new Date()) {
+                alert('終了日は今日以降の日付を設定してください。');
+                return;
+            }
+
+            appData.remainingLessons = parseInt(lessonsInput);
+            appData.expirationDate = endDateObj.toISOString();
+            
+            saveData();
+            document.getElementById('trackerSection').style.display = 'block';
+            updateDisplay();
+        }
+
+        function executeLesson() {
+            if (appData.remainingLessons <= 0) {
+                alert('すでにレッスンをすべて消化しています！');
+                return;
+            }
+
+            appData.remainingLessons--;
+            
+            const now = new Date();
+            const dateString = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            appData.history.unshift(dateString);
+            if (appData.history.length > 5) {
+                appData.history.pop(); // 直近5回だけ保持
+            }
+
+            document.getElementById('totalLessons').value = appData.remainingLessons;
+            saveData();
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            document.getElementById('displayRemaining').textContent = appData.remainingLessons;
+            
+            const expDate = new Date(appData.expirationDate);
+            document.getElementById('displayEndDate').textContent = expDate.toLocaleDateString('ja-JP');
+
+            const paceDisplay = document.getElementById('paceDisplay');
+            const executeBtn = document.getElementById('executeBtn');
+
+            if (appData.remainingLessons === 0) {
+                paceDisplay.textContent = '🎉 目標回数をすべて消化しました！';
+                paceDisplay.style.color = '#155724';
+                paceDisplay.style.backgroundColor = '#d4edda';
+                executeBtn.disabled = true;
+            } else {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const targetDate = new Date(appData.expirationDate);
+                targetDate.setHours(0,0,0,0);
+                
+                const timeDiff = targetDate.getTime() - today.getTime();
+                const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+                executeBtn.disabled = false;
+                paceDisplay.style.color = '#721c24';
+                paceDisplay.style.backgroundColor = '#f8d7da';
+
+                if (daysRemaining < 0) {
+                    paceDisplay.textContent = '⚠️ 消化期間が終了しています！';
+                } else if (daysRemaining === 0) {
+                    paceDisplay.textContent = `🔥 本日中に残り ${appData.remainingLessons} 回 実施が必要です！`;
+                } else {
+                    const pace = daysRemaining / appData.remainingLessons;
+                    paceDisplay.textContent = `💡 ペース目安: ${pace.toFixed(1)}日に1回 の実施が必要です`;
+                }
+            }
+
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            
+            if (appData.history.length === 0) {
+                historyList.innerHTML = '<div class="empty-history">まだ履歴はありません。</div>';
+                return;
+            }
+
+            appData.history.forEach((record) => {
+                const li = document.createElement('li');
+                li.textContent = `✔️ ${record} 実施`;
+                historyList.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
