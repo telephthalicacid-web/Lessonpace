@@ -5,24 +5,29 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="レッスン管理">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=0">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <title>レッスン管理 & リフレクション</title>
+    <title>レッスン管理</title>
     <style>
         :root { 
-            --safe-area-top: env(safe-area-inset-top); 
-            --safe-area-bottom: env(safe-area-inset-bottom);
+            --safe-top: env(safe-area-inset-top); 
+            --safe-bottom: env(safe-area-inset-bottom);
             --primary: #007aff; 
             --secondary: #34c759; 
             --bg: #f2f2f7; 
+            --tab-height: 60px;
         }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
         body { 
             font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
-            padding: calc(10px + var(--safe-area-top)) 15px calc(100px + var(--safe-area-bottom)) 15px; 
-            margin: 0; 
+            margin: 0;
             background: var(--bg); 
             color: #1c1c1e; 
-            overscroll-behavior-y: none; 
+            /* 下部にタブバー＋セーフエリア分の余白を確保 */
+            padding: calc(10px + var(--safe-top)) 15px calc(var(--tab-height) + var(--safe-bottom) + 20px) 15px;
+            min-height: 100vh;
         }
         
         /* タブバーの完全固定 */
@@ -31,54 +36,62 @@
             bottom: 0; 
             left: 0; 
             right: 0; 
-            background: rgba(255,255,255,0.92); 
-            backdrop-filter: blur(20px); 
-            -webkit-backdrop-filter: blur(20px);
-            display: flex; 
+            width: 100%;
+            /* 背景を白くし、セーフエリアまで塗りつぶす */
+            background: #ffffff;
             border-top: 1px solid #d1d1d6; 
-            padding-bottom: var(--safe-area-bottom); 
-            height: calc(65px + var(--safe-area-bottom));
-            z-index: 1000; 
+            display: flex; 
+            justify-content: space-around;
+            align-items: center;
+            /* タブ自体の高さ ＋ iPhoneのホームバー余白 */
+            height: calc(var(--tab-height) + var(--safe-bottom));
+            padding-bottom: var(--safe-bottom);
+            z-index: 9999;
         }
+
         .tab-item { 
-            flex: 1; 
-            text-align: center; 
-            padding-top: 10px;
-            font-size: 11px; 
-            color: #8e8e93; 
-            cursor: pointer; 
-            border: none; 
-            background: none; 
+            flex: 1;
+            height: var(--tab-height);
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
+            text-decoration: none;
+            color: #8e8e93;
+            border: none;
+            background: none;
+            padding: 0;
+            margin: 0;
         }
-        .tab-item.active { color: var(--primary); font-weight: bold; }
-        .tab-icon { font-size: 24px; margin-bottom: 2px; }
 
+        .tab-item.active { color: var(--primary); font-weight: bold; }
+        .tab-icon { font-size: 24px; line-height: 1; margin-bottom: 2px; }
+        .tab-label { font-size: 10px; }
+
+        /* ビューの切り替え */
         .view { display: none; }
         .view.active { display: block; }
 
+        /* カードデザイン */
         .card { background: white; padding: 20px; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px; }
         h2 { font-size: 1.1em; margin: 0 0 15px 0; border-bottom: 1px solid #eee; padding-bottom: 8px; }
         
         .form-group { margin-bottom: 12px; }
         label { display: block; font-size: 0.85em; color: #666; margin-bottom: 4px; font-weight: 600; }
-        input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; box-sizing: border-box; background: #fafafa; }
+        input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; background: #fafafa; }
         .bullet-input { margin-bottom: 6px; }
         textarea { height: 80px; resize: none; }
         
-        button { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1em; width: 100%; font-weight: bold; margin-top: 5px; }
+        button { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1em; width: 100%; font-weight: bold; }
         button:active { opacity: 0.7; }
-        .btn-backup { background: #636366; font-size: 0.9em; margin-top: 30px; }
 
-        .stats { font-size: 1.1em; font-weight: bold; margin: 15px 0; padding: 15px; border-radius: 10px; text-align: center; background: #fff9c4; }
+        .stats { font-size: 1.1em; font-weight: bold; margin: 15px 0; padding: 15px; border-radius: 10px; text-align: center; background: #fff9c4; color: #1c1c1e; }
         
         .list-item { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 10px; position: relative; }
         .list-date { font-size: 0.85em; font-weight: bold; color: var(--primary); margin-bottom: 8px; }
         .list-bullets { margin: 5px 0; padding-left: 18px; font-size: 0.95em; line-height: 1.5; }
         .list-free { font-size: 0.9em; color: #555; border-top: 1px dashed #eee; margin-top: 8px; padding-top: 8px; font-style: italic; }
-        .edit-btn { position: absolute; top: 12px; right: 12px; font-size: 0.8em; color: var(--primary); background: #f0f7ff; padding: 4px 10px; border-radius: 6px; border: none; width: auto; font-weight: normal; }
+        .edit-btn { position: absolute; top: 12px; right: 12px; font-size: 0.8em; color: var(--primary); background: #f0f7ff; padding: 4px 10px; border-radius: 6px; border: none; width: auto; }
     </style>
 </head>
 <body>
@@ -95,9 +108,6 @@
             <div id="paceDisplay" class="stats">計算中...</div>
             <button style="background:var(--secondary)" onclick="executeLesson()">✅ 1回実施を記録</button>
         </div>
-        
-        <!-- 消失対策のバックアップボタン -->
-        <button class="btn-backup" onclick="copyAllData()">📥 全記録をコピー（バックアップ用）</button>
     </div>
 
     <div id="view-reflect" class="view">
@@ -127,12 +137,12 @@
     </div>
 
     <nav class="tab-bar">
-        <div class="tab-item active" id="tab-pace" onclick="switchView('pace')">
-            <span class="tab-icon">📊</span><span>ペース</span>
-        </div>
-        <div class="tab-item" id="tab-reflect" onclick="switchView('reflect')">
-            <span class="tab-icon">✍️</span><span>記録</span>
-        </div>
+        <button class="tab-item active" id="tab-pace" onclick="switchView('pace')">
+            <span class="tab-icon">📊</span><span class="tab-label">ペース</span>
+        </button>
+        <button class="tab-item" id="tab-reflect" onclick="switchView('reflect')">
+            <span class="tab-icon">✍️</span><span class="tab-label">記録</span>
+        </button>
     </nav>
 
     <script>
@@ -179,11 +189,9 @@
             const bullets = [1,2,3,4,5].map(i => document.getElementById('b'+i).value).filter(b => b.trim() !== "");
             const body = document.getElementById('reflectBody').value;
             const editId = document.getElementById('editId').value;
-
             if (!date || (bullets.length === 0 && !body)) return alert('内容を入力してください');
 
             const entry = { date, bullets, body, id: editId ? parseInt(editId) : Date.now() };
-
             if (editId) {
                 const index = appData.reflections.findIndex(r => r.id === entry.id);
                 appData.reflections[index] = entry;
@@ -238,7 +246,6 @@
                         (diff < 0 ? `⚠️ 期限切れ` : (pace >= 1 ? `目安: ${pace.toFixed(1)} 日に1回` : `目安: 1日に ${Math.ceil(1/pace)} 回`));
                 }
             }
-
             const listDiv = document.getElementById('reflectionList');
             listDiv.innerHTML = '<h2 style="margin-top:20px;">過去の記録</h2>';
             if (appData.reflections && appData.reflections.length > 0) {
@@ -257,15 +264,6 @@
             } else {
                 listDiv.innerHTML += '<div style="text-align:center; color:#999; padding:20px;">記録がありません</div>';
             }
-        }
-
-        function copyAllData() {
-            const dataStr = JSON.stringify(appData, null, 2);
-            navigator.clipboard.writeText(dataStr).then(() => {
-                alert('全データをクリップボードにコピーしました！メモ帳などに貼り付けて保存してください。');
-            }).catch(err => {
-                alert('コピーに失敗しました。手動でコピーしてください。');
-            });
         }
     </script>
 </body>
