@@ -2,142 +2,210 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <!-- iPhoneでアプリのように表示させるための設定 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="レッスン管理">
-    
-    <!-- 画面の幅をスマホに合わせ、ズームを防ぐ -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    
-    <title>レッスン消化ペース管理</title>
-        <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <title>レッスン管理 & リフレクション</title>
     <style>
-        :root {
-            --safe-area-top: env(safe-area-inset-top);
-        }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            padding: calc(20px + var(--safe-area-top)) 20px 20px 20px; 
-            max-width: 500px; 
-            margin: 0 auto; 
-            background: #f8f9fa; 
-            color: #333;
-            /* 画面のバウンス（引っ張り）を防いでアプリ感を出す */
-            overscroll-behavior-y: none;
-        }
-        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px; }
-        h1 { font-size: 1.4em; text-align: center; color: #1a1a1a; margin-top: 0; }
-        h2 { font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0; margin-bottom: 15px;}
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85em; color: #666; }
-        input { width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; /* 16px以上にするとiPhoneで自動ズームしません */ background: #fff; }
-        button { background: #007aff; color: white; border: none; padding: 14px; border-radius: 12px; cursor: pointer; font-size: 1em; width: 100%; font-weight: bold; transition: opacity 0.2s; -webkit-tap-highlight-color: transparent; }
+        :root { --safe-area-top: env(safe-area-inset-top); --primary: #007aff; --secondary: #34c759; --bg: #f2f2f7; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: calc(10px + var(--safe-area-top)) 15px 80px 15px; margin: 0; background: var(--bg); color: #1c1c1e; overscroll-behavior-y: none; }
+        
+        /* タブメニュー */
+        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); display: flex; border-top: 1px solid #d1d1d6; padding-bottom: env(safe-area-inset-bottom); z-index: 100; }
+        .tab-item { flex: 1; text-align: center; padding: 12px; font-size: 12px; color: #8e8e93; cursor: pointer; border: none; background: none; }
+        .tab-item.active { color: var(--primary); font-weight: bold; }
+        .tab-icon { font-size: 20px; display: block; margin-bottom: 2px; }
+
+        /* コンテンツ表示切り替え */
+        .view { display: none; animation: fadeIn 0.3s; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .card { background: white; padding: 20px; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        h2 { font-size: 1.1em; margin: 0 0 15px 0; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        
+        /* フォーム要素 */
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.85em; color: #666; margin-bottom: 4px; font-weight: 600; }
+        input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; box-sizing: border-box; background: #fafafa; }
+        textarea { height: 100px; resize: none; }
+        
+        button { background: var(--primary); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1em; width: 100%; font-weight: bold; -webkit-tap-highlight-color: transparent; }
         button:active { opacity: 0.7; }
-        button:disabled { background: #ccc; }
-        .btn-action { background: #34c759; margin-top: 15px; font-size: 1.1em; }
-        .stats { font-size: 1.1em; font-weight: bold; color: #d9534f; margin: 15px 0; padding: 15px; background: #fff5f5; border-radius: 10px; text-align: center; border: 1px solid #ffebeb; }
-        .status-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 1em; }
-        .status-value { font-weight: bold; color: #007aff; }
-        .history-list { list-style: none; padding: 0; margin: 0; }
-        .history-list li { background: #fff; margin-bottom: 8px; padding: 12px; border-radius: 10px; font-size: 0.85em; border: 1px solid #eee; display: flex; justify-content: space-between; }
-        .empty-history { color: #999; font-size: 0.9em; text-align: center; padding: 10px; }
+        .btn-secondary { background: var(--secondary); margin-top: 10px; }
+
+        /* ペース管理用スタイル */
+        .stats { font-size: 1.1em; font-weight: bold; margin: 15px 0; padding: 15px; border-radius: 10px; text-align: center; }
+        .status-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        
+        /* 履歴・リフレクションリスト */
+        .list-item { background: #fff; padding: 15px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 10px; }
+        .list-date { font-size: 0.8em; color: #888; margin-bottom: 5px; }
+        .list-title { font-weight: bold; margin-bottom: 5px; display: block; }
+        .list-text { font-size: 0.9em; color: #444; white-space: pre-wrap; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>レッスン進捗管理</h1>
-        <div class="form-group">
-            <label>残りレッスン回数</label>
-            <input type="number" id="totalLessons" pattern="\d*" placeholder="例: 10">
+
+    <!-- 1. ペース管理画面 -->
+    <div id="view-pace" class="view active">
+        <div class="card">
+            <h2>目標設定</h2>
+            <div class="form-group">
+                <label>残りレッスン回数</label>
+                <input type="number" id="totalLessons" pattern="\d*" placeholder="10">
+            </div>
+            <div class="form-group">
+                <label>消化期限</label>
+                <input type="date" id="endDate">
+            </div>
+            <button onclick="setGoal()">目標を更新</button>
         </div>
-        <div class="form-group">
-            <label>消化期限</label>
-            <input type="date" id="endDate">
+
+        <div class="card" id="trackerSection" style="display: none;">
+            <h2>進捗状況</h2>
+            <div class="status-row"><span>残り</span><span style="font-weight:bold;"><span id="displayRemaining">0</span> 回</span></div>
+            <div id="paceDisplay" class="stats">計算中...</div>
+            <button class="btn-secondary" onclick="executeLesson()">✅ 実施を記録</button>
         </div>
-        <button onclick="setGoal()">目標を更新</button>
     </div>
 
-    <div class="card" id="trackerSection" style="display: none;">
-        <h2>現在の状況</h2>
-        <div class="status-row"><span>残り回数</span><span class="status-value"><span id="displayRemaining">0</span> 回</span></div>
-        <div class="status-row"><span>期限</span><span class="status-value" id="displayEndDate">-</span></div>
-        <div class="stats" id="paceDisplay">計算中...</div>
-        <button class="btn-action" id="executeBtn" onclick="executeLesson()">✅ 1回実施を記録</button>
+    <!-- 2. リフレクション入力画面 -->
+    <div id="view-reflect" class="view">
+        <div class="card">
+            <h2>新しいリフレクション</h2>
+            <div class="form-group">
+                <label>日付</label>
+                <input type="date" id="reflectDate">
+            </div>
+            <div class="form-group">
+                <label>タイトル（例：Lesson 5）</label>
+                <input type="text" id="reflectTitle" placeholder="学んだテーマなど">
+            </div>
+            <div class="form-group">
+                <label>内容・感想</label>
+                <textarea id="reflectBody" placeholder="今日気づいたこと、難しかったこと..."></textarea>
+            </div>
+            <button onclick="saveReflection()">記録を保存する</button>
+        </div>
+
+        <div id="reflectionList">
+            <!-- ここに履歴が並ぶ -->
+        </div>
     </div>
 
-    <div class="card">
-        <h2>実施履歴 (直近5回)</h2>
-        <ul class="history-list" id="historyList">
-            <div class="empty-history">記録はありません</div>
-        </ul>
-    </div>
+    <!-- タブバー -->
+    <nav class="tab-bar">
+        <button class="tab-item active" onclick="switchView('pace')">
+            <span class="tab-icon">📊</span>ペース管理
+        </button>
+        <button class="tab-item" onclick="switchView('reflect')">
+            <span class="tab-icon">✍️</span>リフレクション
+        </button>
+    </nav>
 
     <script>
-        let appData = { remainingLessons: 0, expirationDate: null, history: [] };
+        let appData = { remainingLessons: 0, expirationDate: null, history: [], reflections: [] };
 
         window.onload = function() {
             const saved = localStorage.getItem('lessonTrackerData');
             if (saved) {
                 appData = JSON.parse(saved);
-                document.getElementById('totalLessons').value = appData.remainingLessons;
+                document.getElementById('totalLessons').value = appData.remainingLessons || "";
                 if (appData.expirationDate) document.getElementById('endDate').value = appData.expirationDate.split('T')[0];
-                if (appData.remainingLessons > 0 || appData.history.length > 0) {
-                    document.getElementById('trackerSection').style.display = 'block';
-                    updateDisplay();
-                }
+                document.getElementById('reflectDate').valueAsDate = new Date();
+                updateDisplay();
             }
         };
+
+        function switchView(viewName) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            document.getElementById('view-' + viewName).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
 
         function setGoal() {
             const lessons = document.getElementById('totalLessons').value;
             const date = document.getElementById('endDate').value;
             if (!lessons || !date) return alert('入力してください');
-            
-            const endDateObj = new Date(date);
-            endDateObj.setHours(23, 59, 59, 999);
-            
             appData.remainingLessons = parseInt(lessons);
-            appData.expirationDate = endDateObj.toISOString();
-            localStorage.setItem('lessonTrackerData', JSON.stringify(appData));
-            document.getElementById('trackerSection').style.display = 'block';
-            updateDisplay();
+            appData.expirationDate = new Date(date).toISOString();
+            saveAndSync();
         }
 
         function executeLesson() {
-            if (appData.remainingLessons <= 0) return;
-            appData.remainingLessons--;
-            const now = new Date();
-            const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
-            appData.history.unshift(timeStr);
-            if (appData.history.length > 5) appData.history.pop();
+            if (appData.remainingLessons > 0) {
+                appData.remainingLessons--;
+                document.getElementById('totalLessons').value = appData.remainingLessons;
+                saveAndSync();
+            }
+        }
+
+        function saveReflection() {
+            const date = document.getElementById('reflectDate').value;
+            const title = document.getElementById('reflectTitle').value;
+            const body = document.getElementById('reflectBody').value;
+            if (!date || !title || !body) return alert('すべて入力してください');
+
+            const entry = { date, title, body, id: Date.now() };
+            if (!appData.reflections) appData.reflections = [];
+            appData.reflections.unshift(entry);
             
-            document.getElementById('totalLessons').value = appData.remainingLessons;
+            // 入力欄をクリア
+            document.getElementById('reflectTitle').value = "";
+            document.getElementById('reflectBody').value = "";
+            saveAndSync();
+            alert('記録しました！');
+        }
+
+        function saveAndSync() {
             localStorage.setItem('lessonTrackerData', JSON.stringify(appData));
             updateDisplay();
         }
 
         function updateDisplay() {
-            document.getElementById('displayRemaining').textContent = appData.remainingLessons;
-            const expDate = new Date(appData.expirationDate);
-            document.getElementById('displayEndDate').textContent = expDate.toLocaleDateString('ja-JP');
-
-            const paceDisplay = document.getElementById('paceDisplay');
-            if (appData.remainingLessons === 0) {
-                paceDisplay.textContent = '🎉 完了！お疲れ様でした！';
-                paceDisplay.style.background = "#e1f5fe"; paceDisplay.style.color = "#0288d1";
-            } else {
+            // ペース表示の更新
+            const hasGoal = appData.remainingLessons > 0 || appData.expirationDate;
+            document.getElementById('trackerSection').style.display = hasGoal ? 'block' : 'none';
+            if (hasGoal) {
+                document.getElementById('displayRemaining').textContent = appData.remainingLessons;
+                const paceDisplay = document.getElementById('paceDisplay');
+                const expDate = new Date(appData.expirationDate);
                 const diff = Math.ceil((expDate - new Date()) / (1000 * 3600 * 24));
-                if (diff < 0) { paceDisplay.textContent = '⚠️ 期限切れです'; }
-                else {
+                
+                if (appData.remainingLessons === 0) {
+                    paceDisplay.textContent = '🎉 目標達成！';
+                    paceDisplay.style.background = "#e1f5fe";
+                } else if (diff < 0) {
+                    paceDisplay.textContent = '⚠️ 期限切れ';
+                    paceDisplay.style.background = "#ffebee";
+                } else {
                     const pace = diff / appData.remainingLessons;
-                    paceDisplay.textContent = pace >= 1 ? `💡 約 ${pace.toFixed(1)} 日に1回` : `🔥 1日に ${Math.ceil(1/pace)} 回以上のペース`;
-                    paceDisplay.style.background = "#fff5f5"; paceDisplay.style.color = "#d9534f";
+                    paceDisplay.textContent = pace >= 1 ? `💡 約 ${pace.toFixed(1)} 日に1回` : `🔥 1日に ${Math.ceil(1/pace)} 回`;
+                    paceDisplay.style.background = "#fff9c4";
                 }
             }
 
-            const list = document.getElementById('historyList');
-            list.innerHTML = appData.history.length ? appData.history.map(h => `<li><span>✔️ レッスン実施</span><span>${h}</span></li>`).join('') : '<div class="empty-history">記録はありません</div>';
+            // リフレクションリストの更新
+            const listDiv = document.getElementById('reflectionList');
+            listDiv.innerHTML = '<h2>過去の記録</h2>';
+            if (appData.reflections && appData.reflections.length > 0) {
+                appData.reflections.forEach(ref => {
+                    const item = document.createElement('div');
+                    item.className = 'list-item';
+                    item.innerHTML = `
+                        <div class="list-date">${ref.date}</div>
+                        <span class="list-title">${ref.title}</span>
+                        <div class="list-text">${ref.body}</div>
+                    `;
+                    listDiv.appendChild(item);
+                });
+            } else {
+                listDiv.innerHTML += '<div style="text-align:center; color:#999; margin-top:20px;">記録がありません</div>';
+            }
         }
     </script>
 </body>
